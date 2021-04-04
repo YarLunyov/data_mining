@@ -3,6 +3,36 @@ from urllib.parse import urljoin
 import bs4
 import pymongo
 import time
+import datetime
+
+"""
+{
+    "url": str,
+    "promo_name": str,
+    "product_name": str,
+    "old_price": float,
+    "new_price": float,
+    "image_url": str,
+    "date_from": "DATETIME",
+    "date_to": "DATETIME",
+}
+"""
+
+Months_dict = {
+    "янв": 1,
+    "фев": 2,
+    "мар": 3,
+    "апр": 4,
+    "май": 5,
+    "мая": 5,
+    "июн": 6,
+    "июл": 7,
+    "авг": 8,
+    "сен": 9,
+    "окт": 10,
+    "ноя": 11,
+    "дек": 12,
+}
 
 
 class MagnitParse:
@@ -26,10 +56,23 @@ class MagnitParse:
     @property
     def _template(self):
         data_template = {
+            "promo_name": lambda a: a.find("div", attrs={"class": "card-sale__header"}).text,
             "product_name": lambda a: a.find("div", attrs={"class": "card-sale__title"}).text,
             "url": lambda a: urljoin(self.start_url, a.attrs.get("href", "/")),
             "image_url": lambda a: urljoin(
                 self.start_url, a.find("picture").find("img").attrs.get("data-src", "/")
+            ),
+            "old_price": lambda a: float(
+                ".".join(a.find("div", attrs={"class": "label__price_old"}).text.split())
+            ),
+            "new_price": lambda a: float(
+                ".".join(a.find("div", attrs={"class": "label__price_new"}).text.split())
+            ),
+            "start_date": lambda a: self._get_date(
+                (a.find("div", attrs={"class": "card-sale__date"}).text.split("\n"))[1][2:]
+            ),
+            "stop_date": lambda a: self._get_date(
+                (a.find("div", attrs={"class": "card-sale__date"}).text.split("\n"))[2][3:]
             ),
         }
         return data_template
@@ -48,6 +91,15 @@ class MagnitParse:
                 except AttributeError:
                     pass
             yield product_data
+
+    def _get_date(self, date_string):
+        source_date = date_string.split()
+        res_date = datetime.datetime(
+            year=datetime.datetime.now().year,
+            day=int(source_date[0]),
+            month=Months_dict[source_date[1][:3]],
+        )
+        return res_date
 
     def save(self, data):
         collection = self.db["magnit"]

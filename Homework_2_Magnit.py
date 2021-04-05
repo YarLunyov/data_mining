@@ -6,6 +6,7 @@ import time
 import datetime
 
 """
+Example
 {
     "url": str,
     "promo_name": str,
@@ -65,7 +66,7 @@ class MagnitParse:
             "old_price": lambda a: float(
                 ".".join(a.find("div", attrs={"class": "label__price_old"}).text.split())
             ),
-            "new_price": lambda a: float(
+            "new_price": lambda a: self._check_price(
                 ".".join(a.find("div", attrs={"class": "label__price_new"}).text.split())
             ),
             "start_date": lambda a: self._get_date(
@@ -94,12 +95,24 @@ class MagnitParse:
 
     def _get_date(self, date_string):
         source_date = date_string.split()
-        res_date = datetime.datetime(
-            year=datetime.datetime.now().year,
-            day=int(source_date[0]),
-            month=Months_dict[source_date[1][:3]],
-        )
+        res_date = []
+        try:
+            res_date = datetime.datetime(
+                year=datetime.datetime.now().year,
+                day=int(source_date[0]),
+                month=Months_dict[source_date[1][:3]],
+            )
+        except (IndexError, ValueError):
+            pass
         return res_date
+
+    def _check_price(self, price_string):
+        source_price = price_string
+        try:
+            source_price = float(source_price)
+        except ValueError:
+            pass
+        return source_price
 
     def save(self, data):
         collection = self.db["magnit"]
